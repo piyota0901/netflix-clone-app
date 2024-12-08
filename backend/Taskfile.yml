@@ -1,0 +1,24 @@
+# https://taskfile.dev
+
+version: '3'
+
+vars:
+  GREETING: Hello, World!
+
+tasks:
+  default:
+    cmds:
+      - echo "{{.GREETING}}"
+    silent: true
+  
+  test:
+    cmds:
+      - rye run pytest -v -s tests
+    desc: Run tests for backend
+    silent: true
+
+  clean:
+    cmds:
+      - find . -type d -name "__pycache__" -exec rm -r {} +
+    desc: Remove all __pycache__ directories
+    silent: true
