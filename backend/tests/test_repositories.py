@@ -1,4 +1,9 @@
+import datetime
+from pathlib import Path
+
 import pytest
+from alembic import command
+from alembic.config import Config
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, scoped_session
 
@@ -8,14 +13,6 @@ from app.persistence.repositories import (
     CountryOfProductionRepository,
     GenreRepository,
     MovieRepository,
-)
-
-from app.core.entities import (
-    Actor,
-    Director,
-    CountryOfProduction,
-    Genre,
-    Movie,
 )
 
 from app.core.factories import (
@@ -28,18 +25,35 @@ from app.core.factories import (
 
 @pytest.fixture(scope="function")
 def session():
-    """Create a new session for each test.
-    """
-    engine = create_engine("sqlite:////home/tatsuro/workspaces/netflix-clone-app/backend/netflix.db")
+    """Create a new session for each test."""
+    # テスト用のSQLiteデータベースを設定
+    engine = create_engine("sqlite:///./test.db")
     session = scoped_session(
-                sessionmaker(
-                    bind=engine,
-                    autocommit=False,
-                    autoflush=False
-                )
-            )
-    yield session
-    session.close()
+        sessionmaker(
+            bind=engine,
+            autocommit=False,
+            autoflush=False
+        )
+    )
+
+    # Alembicの設定ファイルを読み込む
+    alembic_cfg_file = Path(__file__).parent.parent / "alembic.ini"
+    alembic_cfg = Config(str(alembic_cfg_file))
+    
+    alembic_cfg.set_main_option("script_location", str(Path(__file__).parent.parent / "alembic"))
+    alembic_cfg.set_main_option("sqlalchemy.url", "sqlite:///./test.db")
+
+    # Alembicを使用してマイグレーションを適用
+    command.upgrade(alembic_cfg, "head")
+
+    try:
+        yield session
+    finally:
+        # テスト終了後にセッションを閉じ、データベースファイルを削除
+        session.close()
+        engine.dispose()
+        import os
+        os.remove("test.db")
 
 
 def test_actor_repository_when_add_actor(session):
@@ -126,48 +140,49 @@ def test_genre_repository_when_add_genre(session):
     # -------------------
     assert genre_repository.find_by_name(name=genre_name) == action
 
-# def test_movie_repository_when_add_movie(session):
-#     """Test MovieRepository
-#     """
-#     # -------------------
-#     # Arrange
-#     # -------------------
-#     movie_repository = MovieRepository(session=session)
-#     actor_repository = ActorRepository(session=session)
-#     director_repository = DirectorRepository(session=session)
-#     country_repository = CountryOfProductionRepository(session=session)
-#     genre_repository = GenreRepository(session=session)
+def test_movie_repository_when_add_movie(session):
+    """Test MovieRepository
+    """
+    # -------------------
+    # Arrange
+    # -------------------
+    movie_repository = MovieRepository(session=session)
+    actor_repository = ActorRepository(session=session)
+    director_repository = DirectorRepository(session=session)
+    country_repository = CountryOfProductionRepository(session=session)
+    genre_repository = GenreRepository(session=session)
     
-#     # Create entities
-#     leo = create_actor(name="Leonardo DiCaprio")
-#     christopher = create_director(name="Christopher Nolan")
-#     usa = create_country_of_production(name="USA")
-#     sci_fi = create_genre(name="Sci-Fi")
+    # Create entities
+    leo = create_actor(name="Leonardo DiCaprio")
+    christopher = create_director(name="Christopher Nolan")
+    usa = create_country_of_production(name="USA")
+    sci_fi = create_genre(name="Sci-Fi")
     
-#     # Add entities
-#     actor_repository.add(leo)
-#     director_repository.add(christopher)
-#     country_repository.add(usa)
-#     genre_repository.add(sci_fi)
+    # Add entities
+    actor_repository.add(leo)
+    director_repository.add(christopher)
+    country_repository.add(usa)
+    genre_repository.add(sci_fi)
+    session.flush()
     
-#     # Create a movie
-#     movie = create_movie(
-#         title="Inception",
-#         description="A thief who steals corporate secrets through the use of dream-sharing technology is given the inverse task of planting an idea into the mind of a C.E.O.",
-#         directors=[christopher],
-#         published_date="2010-07-16",
-#         actors=[leo],
-#         genres=[sci_fi],
-#         country_of_production=usa,
-#     )
+    # Create a movie
+    movie = create_movie(
+        title="Inception",
+        description="A thief who steals corporate secrets through the use of dream-sharing technology is given the inverse task of planting an idea into the mind of a C.E.O.",
+        directors=[christopher],
+        published_date=datetime.date(2010,7,16),
+        actors=[leo],
+        genres=[sci_fi],
+        country_of_production=usa,
+    )
     
-#     # -------------------
-#     # Act
-#     # -------------------
-#     movie_repository.add(movie)
-#     session.flush()
+    # -------------------
+    # Act
+    # -------------------
+    movie_repository.add(movie)
+    session.flush()
     
-#     # -------------------
-#     # Assert
-#     # -------------------
-#     assert movie_repository.find_by_title(title="Inception") == movie
+    # -------------------
+    # Assert
+    # -------------------
+    assert movie_repository.find_all()[0] == movie

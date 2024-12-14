@@ -1,3 +1,4 @@
+import datetime
 import uuid
 
 from sqlalchemy import select
@@ -31,6 +32,17 @@ class ActorRepository:
         """
         actor_model = self._entity_to_model(actor_entity=actor)
         self.session.add(actor_model)
+    
+    def find_all(self):
+        """Find all actors in the database
+        """
+        stmt = select(ActorModel)
+        actor_models = self.session.scalars(stmt).unique().all()
+        
+        return [
+                    self._model_to_entity(actor_model=actor_model)
+                    for actor_model in actor_models
+                ]
     
     def find_by_name(self, name: str) -> Actor | None:
         """Find an actor by name in the database
@@ -129,7 +141,6 @@ class ActorRepository:
                     id=actor_model.id,
                     name=actor_model.name
                 )
-
 
 class DirectorRepository:
     def __init__(self, session: Session):
@@ -256,6 +267,20 @@ class CountryOfProductionRepository:
         country_of_production_model = self._entity_to_model(country_of_production_entity=country_of_production)
         self.session.add(country_of_production_model)
     
+    def find_all(self) -> list[CountryOfProduction]:
+        """Find all countries of production in the database
+
+        Returns:
+            list[CountryOfProduction]: a list of countries of production
+        """
+        stmt = select(CountryOfProductionModel)
+        country_of_production_models = self.session.scalars(stmt).unique().all()
+        
+        return [
+                    self._model_to_entity(country_of_production_model=country_of_production_model)
+                    for country_of_production_model in country_of_production_models
+                ]
+    
     def find_by_name(self, name: str) -> CountryOfProduction | None:
         """Find a country of production by name in the database
 
@@ -315,6 +340,20 @@ class GenreRepository:
         """
         genre_model = self._entity_to_model(genre_entity=genre)
         self.session.add(genre_model)
+    
+    def find_all(self) -> list[Genre]:
+        """Find all genres in the database
+
+        Returns:
+            list[Genre]: a list of genres
+        """
+        stmt = select(GenreModel)
+        genre_models = self.session.scalars(stmt).unique().all()
+        
+        return [
+                    self._model_to_entity(genre_model=genre_model)
+                    for genre_model in genre_models
+        ]
     
     def find_by_name(self, name: str) -> Genre | None:
         """Find a genre by name in the database
@@ -422,9 +461,6 @@ class MovieRepository:
     def add(
         self, 
         movie: Movie,
-        genres: list[Genre],
-        actors: list[Actor],
-        directors: list[Director],
     ):
         """Add a movie to the database
 
@@ -434,19 +470,28 @@ class MovieRepository:
             actors (list[Actor]): Domain model
             directors (list[Director]): Domain model
         """
-        movie_model = self._entity_to_model(movie_entity=movie)
+        movie_model = self._entity_to_model_movie(movie_entity=movie)
+        actors = [self._entity_to_model_actor(actor) for actor in movie.actors]
+        directors = [self._entity_to_model_director(director) for director in movie.directors]
+        genres = [self._entity_to_model_genre(genre) for genre in movie.genres]
+        country_of_production = self._entity_to_model_country(movie.country_of_production)
         
-        for genre in genres:
-            genre_model = self.session.query(GenreModel).get(genre.id)
-            movie_model.genres.append(genre_model)
+        # ------------------
+        # ドメインモデルをORMモデルに変換
+        # https://docs.sqlalchemy.org/en/20/orm/session_state_management.html#merging
+        # https://docs.sqlalchemy.org/en/20/orm/session_api.html#sqlalchemy.orm.Session.merge
+        # ------------------
+        actors = [self.session.merge(actor) for actor in actors]
+        directors = [self.session.merge(director) for director in directors]
+        genres = [self.session.merge(genre) for genre in genres]
+        country_of_production = self.session.merge(country_of_production)
         
-        for actor in actors:
-            actor_model = self.session.query(ActorModel).get(actor.id)
-            movie_model.actors.append(actor_model)
-        
-        for director in directors:
-            director_model = self.session.query(DirectorModel).get(director.id)
-            movie_model.directors.append(director_model)
+        # movie_modelに関連するactor, director, genre, country_of_productionを設定
+        # これにより、movie_modelをsessionに追加すると、actor, director, genre, country_of_productionもsessionに追加される
+        movie_model.actors = actors
+        movie_model.directors = directors
+        movie_model.genres = genres
+        movie_model.country_of_production = country_of_production
         
         self.session.add(movie_model)
     
@@ -457,15 +502,32 @@ class MovieRepository:
             list[Movie]: a list of movies
         """
         stmt = select(MovieModel)
-        movie_models = self.session.scalars(stmt).all()
+        movie_models = self.session.scalars(stmt).unique().all()
         
         return [
-                    self._model_to_entity(movie_model=movie_model)
+                    self._model_to_entity_movie(movie_model=movie_model)
                     for movie_model in movie_models
                 ]
-        
+    
+    def find_by_title_and_year(self, title: str, published_date: datetime.date) -> Movie | None:
+        """Find a movie by title and published date in the database
 
-    def _entity_to_model(self, movie_entity: Movie) -> MovieModel:
+        Args:
+            title (str): _description_
+            published_date (datetime.date): _description_
+
+        Returns:
+            Movie | None: _description_
+        """
+        stmt = select(MovieModel).where(MovieModel.title == title, MovieModel.published_date == published_date)
+        movie_model = self.session.scalars(stmt).first()
+        
+        if movie_model is None:
+            return None
+        
+        return self._model_to_entity_movie(movie_model=movie_model)
+
+    def _entity_to_model_movie(self, movie_entity: Movie) -> MovieModel:
         """Domain model to ORM model
 
         Args:
@@ -482,7 +544,19 @@ class MovieRepository:
                     country_of_production_id=movie_entity.country_of_production.id
                 )
     
-    def _model_to_entity(self, movie_model: MovieModel) -> Movie:
+    def _model_to_entity_actor(self, actor_model: ActorModel) -> Actor:
+        return Actor(id=actor_model.id, name=actor_model.name)
+    
+    def _model_to_entity_director(self, director_model: DirectorModel) -> Director:
+        return Director(id=director_model.id, name=director_model.name)
+    
+    def _model_to_entity_genre(self, genre_model: GenreModel) -> Genre:
+        return Genre(id=genre_model.id, name=genre_model.name)
+    
+    def _model_to_entity_country(self, country_model: CountryOfProductionModel) -> CountryOfProduction:
+        return CountryOfProduction(id=country_model.id, name=country_model.name)
+    
+    def _model_to_entity_movie(self, movie_model: MovieModel) -> Movie:
         """ORM model to Domain model
 
         Args:
@@ -522,3 +596,15 @@ class MovieRepository:
                         for actor in movie_model.actors
                     ]
                 )
+    
+    def _entity_to_model_actor(self, actor_entity: Actor) -> ActorModel:
+        return ActorModel(id=actor_entity.id, name=actor_entity.name)
+    
+    def _entity_to_model_director(self, director_entity: Director) -> DirectorModel:
+        return DirectorModel(id=director_entity.id, name=director_entity.name)
+    
+    def _entity_to_model_genre(self, genre_entity: Genre) -> GenreModel:
+        return GenreModel(id=genre_entity.id, name=genre_entity.name)
+    
+    def _entity_to_model_country(self, country_entity: CountryOfProduction) -> CountryOfProductionModel:
+        return CountryOfProductionModel(id=country_entity.id, name=country_entity.name)

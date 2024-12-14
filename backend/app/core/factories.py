@@ -1,3 +1,4 @@
+import datetime
 import uuid
 
 from app.core.entities import (
@@ -58,7 +59,7 @@ def create_genre(name: str) -> Genre:
 def create_movie(
     title: str, 
     description: str, 
-    published_date: str, 
+    published_date: datetime.date, 
     country_of_production: CountryOfProduction, 
     genres: list[Genre], 
     actors: list[Actor], 

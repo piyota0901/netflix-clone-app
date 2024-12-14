@@ -138,3 +138,17 @@ class Movie:
     @property
     def published_date(self) -> datetime.date:
         return self._published_date
+    
+    def __repr__(self):
+        return f"<Movie(id={self.id!r}, \
+                        description={self.description!r}, \
+                        title={self.title!r}, \
+                        published_date={self.published_date!r}, \
+                        country_of_production={self.country_of_production!r}, \
+                        directors={self.directors!r}, \
+                        actors={self.actors!r}, \
+                        genres={self.genres!r} \
+                )>"
+    
+    def __eq__(self, other: "Movie"):
+        return self.title == other.title and self.published_date == other.published_date

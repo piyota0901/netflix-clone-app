@@ -6,7 +6,8 @@ from sqlalchemy import (
     TEXT,
     DATE,
     Table,
-    Column
+    Column,
+    UniqueConstraint
 )
 from sqlalchemy.orm import (
     DeclarativeBase,
@@ -38,7 +39,8 @@ class ActorModel(Base,TimestampMixin):
     
     movies: Mapped[list["MovieModel"]] = relationship(
         secondary="movie_to_actor",
-        back_populates="actors"
+        back_populates="actors",
+        lazy="joined"
     )
 
     def __repr__(self):
@@ -55,11 +57,12 @@ class DirectorModel(Base,TimestampMixin):
     __tablename__ = 'directors'
 
     id: Mapped[str] = mapped_column(primary_key=True)
-    name: Mapped[str] = mapped_column(String(255))
+    name: Mapped[str] = mapped_column(String(255), unique=True)
     
     movies: Mapped[list["MovieModel"]] = relationship(
         secondary="movie_to_director",
-        back_populates="directors"
+        back_populates="directors",
+        lazy="joined"
     )
 
     def __repr__(self):
@@ -76,7 +79,7 @@ class CountryOfProductionModel(Base,TimestampMixin):
     __tablename__ = 'countries_of_production'
 
     id: Mapped[str] = mapped_column(primary_key=True)
-    name: Mapped[str] = mapped_column(String(255))
+    name: Mapped[str] = mapped_column(String(255),unique=True)
     
     # https://docs.sqlalchemy.org/en/20/orm/basic_relationships.html#many-to-one
     movies: Mapped[list["MovieModel"]] = relationship(back_populates="country_of_production")
@@ -95,12 +98,13 @@ class GenreModel(Base,TimestampMixin):
     __tablename__ = 'genres'
 
     id: Mapped[str] = mapped_column(primary_key=True)
-    name: Mapped[str] = mapped_column(String(255))
+    name: Mapped[str] = mapped_column(String(255), unique=True)
     
     # https://docs.sqlalchemy.org/en/20/orm/basic_relationships.html#many-to-many
     movies: Mapped[list["MovieModel"]] = relationship(
         secondary="movie_to_genre",
-        back_populates="genres"
+        back_populates="genres",
+        lazy="joined"
     )
 
     def __repr__(self):
@@ -121,28 +125,44 @@ class MovieModel(Base,TimestampMixin):
     description: Mapped[str] = mapped_column(TEXT)
     published_date: Mapped[datetime.date] = mapped_column(DATE)
     
+    # https://docs.sqlalchemy.org/en/20/orm/declarative_tables.html#declarative-table-configuration
+    __table_args__ = (
+        UniqueConstraint('title', 'published_date'),
+    )
+    
     # https://docs.sqlalchemy.org/en/20/orm/basic_relationships.html#many-to-one
     country_of_production_id: Mapped[str] = mapped_column(ForeignKey('countries_of_production.id'))
-    country_of_production: Mapped["CountryOfProductionModel"] = relationship(back_populates="movies")
+    country_of_production: Mapped["CountryOfProductionModel"] = relationship(back_populates="movies",lazy="joined")
     
     # https://docs.sqlalchemy.org/en/20/orm/basic_relationships.html#many-to-many
     genres: Mapped[list["GenreModel"]] = relationship(
         secondary="movie_to_genre",
-        back_populates="movies"
+        back_populates="movies",
+        lazy="joined"
     )
 
     actors: Mapped[list["ActorModel"]] = relationship(
         secondary="movie_to_actor",
-        back_populates="movies"
+        back_populates="movies",
+        lazy="joined"
     )
     
     directors: Mapped[list["DirectorModel"]] = relationship(
         secondary="movie_to_director",
-        back_populates="movies"
+        back_populates="movies",
+        lazy="joined"
     )
     
     def __repr__(self):
-        return f"<MovieModel(id={self.id!r}, title={self.title!r}, description={self.description!r}, published_date={self.published_date!r}, genre={self.genre!r})>"
+        return f"<MovieModel(id={self.id!r}, \
+                             title={self.title!r}, \
+                             description={self.description!r}, \
+                             published_date={self.published_date!r}, \
+                             genres={self.genres!r} \
+                             actors={self.actors!r} \
+                             directors={self.directors!r} \
+                             country_of_production={self.country_of_production!r} \
+                )>"
 
     def to_dict(self):
         return {
@@ -174,7 +194,7 @@ movie_to_director = Table(
     Column("director_id", ForeignKey("directors.id"), primary_key=True)
 )
 
-movie_to_director = Table(
+movie_to_genre = Table(
     "movie_to_genre",
     Base.metadata,
     Column("movie_id", ForeignKey("movies.id"), primary_key=True),
