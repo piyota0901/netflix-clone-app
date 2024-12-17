@@ -32,6 +32,11 @@ class MovieUseCase:
         self.director_repository = director_repository
         self.genre_repository = genre_repository
         self.country_of_production_repository = country_of_production_repository
+    
+    def get_all(self):
+        """Get all movies.
+        """
+        return self.movie_repository.find_all()
 
     def register(self, movie_create: MovieCreate):
         """Register a movie.

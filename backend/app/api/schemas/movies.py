@@ -21,7 +21,7 @@ class DirectorBase(BaseModel):
 class DirectorCreate(BaseModel):
     name: str
 
-class DirectorResponse(BaseModel):
+class DirectorResponse(DirectorBase):
     id: str
     
     model_config: ConfigDict = ConfigDict(from_attributes=True)
