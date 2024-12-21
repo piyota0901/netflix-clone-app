@@ -1,4 +1,5 @@
 import datetime
+import hashlib
 import uuid
 
 from app.core.entities import (
@@ -7,6 +8,7 @@ from app.core.entities import (
     CountryOfProduction,
     Genre,
     Movie,
+    Poster,
 )
 
 def _generate_uuid():
@@ -56,6 +58,20 @@ def create_genre(name: str) -> Genre:
     """
     return Genre(id=_generate_uuid(), name=name)
 
+def create_poster(byte: bytes) -> Poster:
+    """Create a poster.
+
+    Args:
+        byte (bytes): binary of the poster
+
+    Returns:
+        Poster: a poster
+    """
+    unique_id = str(uuid.uuid4())
+    filename = hashlib.sha256(unique_id.encode()).hexdigest()
+    
+    return Poster(id=_generate_uuid(), binary=byte, filename=filename)
+
 def create_movie(
     title: str, 
     description: str, 
@@ -63,7 +79,8 @@ def create_movie(
     country_of_production: CountryOfProduction, 
     genres: list[Genre], 
     actors: list[Actor], 
-    directors: list[Director]
+    directors: list[Director],
+    poster: Poster
     ) -> Movie:
     """Create a movie.
 
@@ -75,6 +92,7 @@ def create_movie(
         genres (list[Genre]): genres of the movie
         actors (list[Actor]): actors of the movie
         directors (list[Director]): directors of the movie
+        poster (Poster): poster of the movie
 
     Returns:
         Movie: a movie
@@ -87,5 +105,6 @@ def create_movie(
         country_of_production=country_of_production,
         genres=genres,
         actors=actors,
-        directors=directors
+        directors=directors,
+        poster=poster
     )

@@ -86,17 +86,48 @@ class Genre:
         return self.name == other.name
 
 
+# NOTE: ファイルオブジェクトなどの基底クラスを作成して抽象化したほうがよいかもしれない
+class Poster:
+    """映画のポスター画像を表現するドメインモデル"""
+    
+    def __init__(
+        self,
+        id: UUID,
+        binary: bytes,
+        filename: str
+    ):
+        self._id = id
+        self._binary = binary
+        self._filename = filename
+    
+    @property
+    def id(self):
+        return self._id
+    
+    @property
+    def binary(self):
+        return self._binary
+    
+    @property
+    def filename(self):
+        return self._filename
+    
+    def __repr__(self):
+        return f"<Poster(id={self.id!r}, filename={self.filename!r})>"
+
+
 class Movie:
     """映画を表現するドメインモデル"""
     def __init__(
         self, id: UUID, 
         title: str, 
         description: str, 
+        published_date: datetime.date,
         directors: List[Director], 
         actors: List[Actor], 
         genres: List[Genre], 
         country_of_production: CountryOfProduction, 
-        published_date: datetime.date
+        poster: Poster
     ):
         self._id = id
         self._title = title
@@ -106,6 +137,7 @@ class Movie:
         self._genres = genres
         self._country_of_production = country_of_production
         self._published_date = published_date
+        self._poster = poster
 
     @property
     def id(self) -> UUID:
@@ -139,6 +171,10 @@ class Movie:
     def published_date(self) -> datetime.date:
         return self._published_date
     
+    @property
+    def poster(self) -> Poster:
+        return self._poster
+    
     def __repr__(self):
         return f"<Movie(id={self.id!r}, \
                         description={self.description!r}, \
@@ -148,6 +184,7 @@ class Movie:
                         directors={self.directors!r}, \
                         actors={self.actors!r}, \
                         genres={self.genres!r} \
+                        poster={self.poster!r} \
                 )>"
     
     def __eq__(self, other: "Movie"):

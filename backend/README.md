@@ -40,3 +40,8 @@ https://docs.sqlalchemy.org/en/20/orm/queryguide/select.html#writing-select-stat
     ```bash
     $ rye run alembic revision -m "マイグレーションの説明"
     ```
+
+## TMDB
+
+- ポスター画像の取得
+    [Image | Basic](https://developer.themoviedb.org/docs/image-basics)

@@ -1,4 +1,5 @@
 import datetime
+import pathlib
 import uuid
 
 from sqlalchemy import select
@@ -9,8 +10,10 @@ from app.core.entities import (
     Director,
     CountryOfProduction,
     Genre,
-    Movie, 
+    Movie,
+    Poster, 
 )
+from app.persistence.unit_of_work import PosterFileStorageSession
 from app.persistence.models import (
     ActorModel,
     CountryOfProductionModel,
@@ -485,6 +488,7 @@ class MovieRepository:
         directors = [self.session.merge(director) for director in directors]
         genres = [self.session.merge(genre) for genre in genres]
         country_of_production = self.session.merge(country_of_production)
+        poster = self.session.merge(poster)
         
         # movie_modelに関連するactor, director, genre, country_of_productionを設定
         # これにより、movie_modelをsessionに追加すると、actor, director, genre, country_of_productionもsessionに追加される
@@ -492,6 +496,7 @@ class MovieRepository:
         movie_model.directors = directors
         movie_model.genres = genres
         movie_model.country_of_production = country_of_production
+        movie_model.poster = poster
         
         self.session.add(movie_model)
     
@@ -541,7 +546,8 @@ class MovieRepository:
                     title=movie_entity.title,
                     description=movie_entity.description,
                     published_date=movie_entity.published_date,
-                    country_of_production_id=movie_entity.country_of_production.id
+                    country_of_production_id=movie_entity.country_of_production.id,
+                    poster_id=movie_entity.poster.id
                 )
     
     def _model_to_entity_actor(self, actor_model: ActorModel) -> Actor:
@@ -594,7 +600,12 @@ class MovieRepository:
                             name=actor.name
                         )
                         for actor in movie_model.actors
-                    ]
+                    ],
+                    poster=Poster(
+                        id=movie_model.poster.id,
+                        binary=None,
+                        filename=None
+                    )
                 )
     
     def _entity_to_model_actor(self, actor_entity: Actor) -> ActorModel:
@@ -608,3 +619,54 @@ class MovieRepository:
     
     def _entity_to_model_country(self, country_entity: CountryOfProduction) -> CountryOfProductionModel:
         return CountryOfProductionModel(id=country_entity.id, name=country_entity.name)
+
+
+class PosterRepository:
+    def __init__(self, session: PosterFileStorageSession):
+        self.session = session
+    
+    def add(self, poster: Poster):
+        """Add a poster to the directory
+
+        Args:
+            poster (Poster): Domain model
+        """
+        self.session.add(poster)
+    
+    def find_by_id(self, id: uuid.UUID) -> Poster | None:
+        """Find a poster by id in the directory
+
+        Args:
+            id (uuid.UUID): id of the poster
+
+        Returns:
+            Poster | None: a poster or None
+        """
+        
+    
+
+    #     file_path = self.directory / poster.filename
+    #     with open(file_path, "wb") as f:
+    #         f.write(poster.binary)        
+    
+    # def find_by_id(self, id: uuid.UUID) -> Poster | None:
+    #     """Find a poster by id in the directory
+        
+    #     Args:
+    #         id (uuid.UUID): id of the poster
+        
+    #     Returns:
+    #         Poster | None: a poster or None
+    #     """
+    #     filepath = self.directory / pathlib.Path(f"{id}.jpg")
+        
+    #     if filepath.parent != self.directory:
+    #         raise ValueError("Access outside the base directory is not allowed.") # TODO: 例外クラスを作成
+        
+    #     if not filepath.exists():
+    #         raise FileNotFoundError(f"{filepath} not found.") 
+        
+    #     with open(filepath, "rb") as f:
+    #         binary = f.read()
+        
+    #     return Poster(id=id, binary=binary, filename=filepath.name)

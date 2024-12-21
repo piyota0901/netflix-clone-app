@@ -116,7 +116,6 @@ class GenreModel(Base,TimestampMixin):
             "name": self.name
         }
 
-
 class MovieModel(Base,TimestampMixin):
     __tablename__ = 'movies'
 
@@ -124,6 +123,7 @@ class MovieModel(Base,TimestampMixin):
     title: Mapped[str] = mapped_column(String(255))
     description: Mapped[str] = mapped_column(TEXT)
     published_date: Mapped[datetime.date] = mapped_column(DATE)
+    poster_id: Mapped[str] = mapped_column(String(255))
     
     # https://docs.sqlalchemy.org/en/20/orm/declarative_tables.html#declarative-table-configuration
     __table_args__ = (
@@ -162,6 +162,7 @@ class MovieModel(Base,TimestampMixin):
                              actors={self.actors!r} \
                              directors={self.directors!r} \
                              country_of_production={self.country_of_production!r} \
+                             poster_id={self.poster_id!r} \
                 )>"
 
     def to_dict(self):
@@ -172,8 +173,10 @@ class MovieModel(Base,TimestampMixin):
             "published_date": self.published_date,
             "genres": [genre.to_dict() for genre in self.genres],
             "actors": [actor.to_dict() for actor in self.actors],
-            "directors": [director.to_dict() for director in self.directors]
-        }
+            "directors": [director.to_dict() for director in self.directors],
+            "country_of_production": self.country_of_production.to_dict(),
+            "poster_id": self.poster_id
+        }    
 
 
 # ------------------------------------------------------------

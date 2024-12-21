@@ -13,6 +13,7 @@ from app.persistence.repositories import (
     CountryOfProductionRepository,
     GenreRepository,
     MovieRepository,
+    PosterRepository
 )
 
 from app.core.factories import (
@@ -21,6 +22,7 @@ from app.core.factories import (
     create_country_of_production,
     create_genre,
     create_movie,
+    create_poster
 )
 
 @pytest.fixture(scope="function")
@@ -158,6 +160,10 @@ def test_movie_repository_when_add_movie(session):
     usa = create_country_of_production(name="USA")
     sci_fi = create_genre(name="Sci-Fi")
     
+    with open("tests/assets/inception.jpg", "rb") as f:
+        byte = f.read()
+    poster = create_poster(byte=byte)
+    
     # Add entities
     actor_repository.add(leo)
     director_repository.add(christopher)
@@ -174,6 +180,7 @@ def test_movie_repository_when_add_movie(session):
         actors=[leo],
         genres=[sci_fi],
         country_of_production=usa,
+        poster=poster
     )
     
     # -------------------
